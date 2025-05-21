@@ -1,54 +1,28 @@
-# Youtube Crew
+# Описание проекта
 
-Welcome to the Youtube Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+Этот проект — автоматизированная система для создания видеоподкастов по B2B-продажам, разработанная с помощью CrewAI Studio. Основная цель — упростить и автоматизировать процесс подготовки, озвучивания и видеопрезентации экспертного контента по B2B-продажам для YouTube-канала.
 
-## Installation
+## Основные особенности
 
-Ensure you have Python >=3.10 <3.13 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+- Полуавтоматический пайплайн: от поиска и отбора качественных книг/текстов по B2B-продажам до генерации аудиоподкаста и создания видеоподкаста с двумя аватарами
+- Использование CrewAI для оркестрации агентов, отвечающих за разные этапы процесса
+- Интеграция современных AI-инструментов для преобразования текста в аудио и видео
+- Проект был сгенерирован с помощью CrewAI Studio, что позволило быстро развернуть структуру и логику взаимодействия агентов
+- Подробное описание архитектуры, этапов и инструментов проекта приведено в PRD.md
 
-First, if you haven't already, install uv:
+## Подробнее о проекте
 
-```bash
-pip install uv
-```
+- Все этапы, цели, используемые технологии и потенциальные сложности подробно описаны в файле PRD.md
+- Структура и логика агентов, а также задачи для каждого этапа, определены с помощью CrewAI Studio и могут быть легко модифицированы под ваши нужды
 
-Next, navigate to your project directory and install the dependencies:
+## Установка
 
-(Optional) Lock the dependencies and install them by using the CLI command:
-```bash
-crewai install
-```
-### Customizing
+Убедитесь, что у вас установлен Python >=3.10 <3.13. Проект использует [UV](https://docs.astral.sh/uv/) для управления зависимостями и пакетами.
 
-**Add your `OPENAI_API_KEY` into the `.env` file**
+Сначала установите uv:
 
-- Modify `src/youtube/config/agents.yaml` to define your agents
-- Modify `src/youtube/config/tasks.yaml` to define your tasks
-- Modify `src/youtube/crew.py` to add your own logic, tools and specific args
-- Modify `src/youtube/main.py` to add custom inputs for your agents and tasks
 
-## Running the Project
 
-To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
 
-```bash
-$ crewai run
-```
 
-This command initializes the youtube Crew, assembling the agents and assigning them tasks as defined in your configuration.
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
-
-## Understanding Your Crew
-
-The youtube Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
-
-## Support
-
-For support, questions, or feedback regarding the Youtube Crew or crewAI.
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
-
-Let's create wonders together with the power and simplicity of crewAI.
