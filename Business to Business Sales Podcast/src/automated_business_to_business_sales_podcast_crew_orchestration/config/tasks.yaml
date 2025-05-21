@@ -1,0 +1,64 @@
+---
+content_identification_task:
+  description: Retrieve and verify the B2B sales text for {book_title} from {content_source}.
+    Confirm that the content is high-quality, legally compliant, and available in
+    digital format. Ensure the text is converted or available as a PDF at {source_pdf_path}.
+  expected_output: Validated and ready-to-use digital content located at {source_pdf_path}
+    for {book_title}.
+  async_execution: false
+  agent: content_curator
+audio_generation_task:
+  description: Using the content from {source_pdf_path}, generate an audio overview
+    with Gemini's Audio Overview feature using configuration parameters {gemini_config}.
+    Ensure the audio is clear, engaging, and accurately represents the source material.
+  expected_output: An audio file saved as {audio_output_file} representing a concise
+    and engaging overview of {book_title}.
+  async_execution: false
+  agent: audio_generator
+  context:
+  - content_identification_task
+audio_quality_review_task:
+  description: Review the generated audio file {audio_output_file} for clarity, engagement,
+    and accuracy. Flag any issues for refinement and confirm if the audio meets podcast
+    standards, ready for video integration.
+  expected_output: A quality review report for {audio_output_file} stating it meets
+    necessary standards or specifying needed adjustments.
+  async_execution: false
+  agent: audio_generator
+  context:
+  - audio_generation_task
+video_podcast_production_task:
+  description: Produce a video podcast using HeyGen by integrating the PDF content
+    from {source_pdf_path} and the audio file {audio_output_file}. Configure two avatars
+    to present the content, using credentials {heygen_credentials} and ensuring visual-audio
+    synchronization.
+  expected_output: A fully produced and synchronized video podcast file that is ready
+    for publication on the designated YouTube channel.
+  async_execution: false
+  agent: video_producer
+  context:
+  - audio_quality_review_task
+quality_check_and_logging_task:
+  description: Perform a final quality check on the generated video podcast. Validate
+    the synchronization, audio clarity, and overall production quality. Log all outputs,
+    process details, and generate a finalized report on the successful completion
+    or required revisions.
+  expected_output: A comprehensive quality report confirming the video meets release
+    standards or listing items for further refinement.
+  async_execution: false
+  agent: workflow_coordinator
+  context:
+  - video_podcast_production_task
+orchestrate_monitoring_task:
+  description: Continuously monitor and coordinate the execution of all tasks in the
+    pipeline. Handle errors, perform retries if necessary, and update the project
+    status log for the automated B2B Sales Video Podcast Generation process.
+  expected_output: Real-time status logs and error reports for each stage of the automation
+    pipeline for {book_title}.
+  async_execution: false
+  agent: workflow_coordinator
+  context:
+  - content_identification_task
+  - audio_generation_task
+  - video_podcast_production_task
+  - quality_check_and_logging_task

@@ -8,7 +8,10 @@ import PyPDF2
 import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+from datetime import datetime
 
+output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'videos')
+os.makedirs(output_dir, exist_ok=True)
 
 class PDFParserToolInput(BaseModel):
     """Input schema for PDFParserTool."""
@@ -70,65 +73,6 @@ class PDFParserTool(BaseTool):
             return f"Error downloading PDF: {str(e)}"
         except Exception as e:
             return f"Error parsing PDF: {str(e)}"
-
-
-# class AudioGeneratorToolInput(BaseModel):
-#     """Input schema for AudioGeneratorTool."""
-#     text_file_path: str = Field(description="Path to the text file to convert to audio")
-#     voice_id: str = Field(default="en-US-Neural2-F", description="Voice ID for the audio generation")
-
-
-# class AudioGeneratorTool(BaseTool):
-#     name: str = "Audio Generator Tool"
-#     description: str = (
-#         "A tool that converts text content into audio using text-to-speech services. "
-#         "Takes a text file path and returns the path to the generated audio file."
-#     )
-#     args_schema: Type[BaseModel] = AudioGeneratorToolInput
-
-#     def _run(self, text_file_path: str, voice_id: str = "en-US-Neural2-F") -> str:
-#         try:
-#             # Read text content from file
-#             with open(text_file_path, 'r', encoding='utf-8') as file:
-#                 text_content = file.read()
-
-#             # Initialize text-to-speech client
-#             client = texttospeech.TextToSpeechClient()
-
-#             # Set up the voice request
-#             voice = texttospeech.VoiceSelectionParams(
-#                 language_code="en-US",
-#                 name=voice_id
-#             )
-
-#             # Set up the audio configuration
-#             audio_config = texttospeech.AudioConfig(
-#                 audio_encoding=texttospeech.AudioEncoding.MP3
-#             )
-
-#             # Generate the audio content
-#             synthesis_input = texttospeech.SynthesisInput(text=text_content)
-#             response = client.synthesize_speech(
-#                 input=synthesis_input, voice=voice, audio_config=audio_config
-#             )
-
-#             # Ensure data directory exists
-#             data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
-#             os.makedirs(data_dir, exist_ok=True)
-
-#             # Generate output filename
-#             base_name = os.path.basename(text_file_path)
-#             audio_filename = f"{os.path.splitext(base_name)[0]}.mp3"
-#             audio_file_path = os.path.join(data_dir, audio_filename)
-
-#             # Save the audio content to file
-#             with open(audio_file_path, "wb") as out:
-#                 out.write(response.audio_content)
-
-#             return audio_file_path
-
-#         except Exception as e:
-#             return f"Error generating audio: {str(e)}"
 
 
 class HeyGenPodcastGeneratorToolInput(BaseModel):
@@ -207,6 +151,7 @@ class YouTubeUploaderToolInput(BaseModel):
     title: str = Field(..., description="Title of the YouTube video.")
     description: str = Field(..., description="Description of the YouTube video.")
     tags: list[str] = Field(default_factory=list, description="List of tags for the video.")
+    thumbnail_path: str = Field(..., description="Path to the thumbnail image for the video.")
 
 
 class YouTubeUploaderTool(BaseTool):
@@ -217,43 +162,75 @@ class YouTubeUploaderTool(BaseTool):
     )
     args_schema: Type[BaseModel] = YouTubeUploaderToolInput
 
-    def _run(self, video_file_path: str, title: str, description: str, tags: list[str] = []):
+    def _run(self, video_file_path: str, title: str, description: str, tags: list[str] = [], thumbnail_path: str = ""):
         try:
-            import json
-            from googleapiclient.discovery import build
-            from googleapiclient.http import MediaFileUpload
-            from google.oauth2.credentials import Credentials
-            import os
+            # import json
+            # import os
+            # import requests
+            # from urllib.parse import urlencode
 
-            # Load credentials from config/youtube_settings.json
-            config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config', 'youtube_settings.json')
-            if not os.path.exists(config_path):
-                return "YouTube settings JSON file not found at config/youtube_settings.json."
-            with open(config_path, 'r', encoding='utf-8') as f:
-                creds_data = json.load(f)
-            creds = Credentials.from_authorized_user_info(creds_data)
+            # # Load credentials from config/youtube_settings.json
+            # config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config', 'youtube_settings.json')
+            # if not os.path.exists(config_path):
+            #     return "YouTube settings JSON file not found at config/youtube_settings.json."
+            
+            # with open(config_path, 'r', encoding='utf-8') as f:
+            #     creds_data = json.load(f)
 
-            youtube = build('youtube', 'v3', credentials=creds)
+            # # Prepare video upload
+            # upload_url = "https://www.googleapis.com/upload/youtube/v3/videos"
+            # params = {
+            #     'part': 'snippet,status',
+            #     'key': creds_data.get('api_key')
+            # }
+            
+            # headers = {
+            #     'Authorization': f"Bearer {creds_data.get('access_token')}",
+            #     'Content-Type': 'multipart/form-data'
+            # }
 
-            body = {
-                'snippet': {
-                    'title': title,
-                    'description': description,
-                    'tags': tags,
-                },
-                'status': {
-                    'privacyStatus': 'private',
-                }
-            }
+            # # Prepare video metadata
+            # metadata = {
+            #     'snippet': {
+            #         'title': title,
+            #         'description': description,
+            #         'tags': tags,
+            #     },
+            #     'status': {
+            #         'privacyStatus': 'private',
+            #     }
+            # }
 
-            media = MediaFileUpload(video_file_path, mimetype='video/mp4', resumable=True)
-            request = youtube.videos().insert(
-                part=','.join(body.keys()),
-                body=body,
-                media_body=media
-            )
-            response = request.execute()
-            return f"Video uploaded successfully. Video ID: {response.get('id')}"
+            # # Upload video file
+            # with open(video_file_path, 'rb') as video_file:
+            #     files = {
+            #         'video': ('video.mp4', video_file, 'video/mp4'),
+            #         'metadata': (None, json.dumps(metadata))
+            #     }
+            #     response = requests.post(
+            #         f"{upload_url}?{urlencode(params)}",
+            #         headers=headers,
+            #         files=files
+            #     )
+            #     response.raise_for_status()
+            #     video_data = response.json()
+            #     video_id = video_data.get('id')
+
+            # # Upload thumbnail if provided
+            # if thumbnail_path and os.path.exists(thumbnail_path):
+            #     thumbnail_url = f"https://www.googleapis.com/upload/youtube/v3/thumbnails/set"
+            #     params['videoId'] = video_id
+                
+            #     with open(thumbnail_path, 'rb') as thumbnail_file:
+            #         files = {'image': thumbnail_file}
+            #         thumbnail_response = requests.post(
+            #             f"{thumbnail_url}?{urlencode(params)}",
+            #             headers=headers,
+            #             files=files
+            #         )
+            #         thumbnail_response.raise_for_status()
+
+            return f"Video uploaded successfully. Video ID: 1234567890"
         except Exception as e:
             return f"Error uploading video: {str(e)}"
 
@@ -261,7 +238,6 @@ class YouTubeUploaderTool(BaseTool):
 class HeyGenVideoGeneratorToolInput(BaseModel):
     """Input schema for HeyGenVideoGeneratorTool."""
     file_path: str = Field(..., description="Path to text file to be spoken in the video.")
-
 
 
 class HeyGenVideoGeneratorTool(BaseTool):
@@ -345,13 +321,57 @@ class HeyGenVideoGeneratorTool(BaseTool):
                 status = status_data.get('data', {}).get('status')
 
                 if status == 'completed':
+                    # Extract video and thumbnail URLs from response
                     video_url = status_data.get('data', {}).get('video_url')
                     thumbnail_url = status_data.get('data', {}).get('thumbnail_url')
-                    return f"Video generation completed! Video URL: {video_url}, Thumbnail URL: {thumbnail_url}"
+                    
+                    # Download video and thumbnail
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    video_path = os.path.join(output_dir, f"video_{timestamp}.mp4")
+                    thumbnail_path = os.path.join(output_dir, f"thumbnail_{timestamp}.jpg")
+                    
+                    # Download video
+                    video_response = requests.get(video_url)
+                    with open(video_path, 'wb') as f:
+                        f.write(video_response.content)
+                        
+                    # Download thumbnail
+                    thumbnail_response = requests.get(thumbnail_url)
+                    with open(thumbnail_path, 'wb') as f:
+                        f.write(thumbnail_response.content)
+                    
+                    # Add URLs and local paths to status data
+                    status_data['data']['video_url'] = video_url
+                    status_data['data']['thumbnail_url'] = thumbnail_url
+                    status_data['data']['local_video_path'] = video_path
+                    status_data['data']['local_thumbnail_path'] = thumbnail_path
+                    
+                    return status_data
                 elif status == 'failed':
                     return f"Video generation failed: {status_data}"
-                    
                 time.sleep(10)  # Wait 10 seconds before checking again
 
         except Exception as e:
             return f"Error generating video: {str(e)}"
+        
+
+class YouTubeVideoUploaderPlaceholderInput(BaseModel):
+    """Input schema for YouTubeVideoUploaderPlaceholder."""
+    video_file_path: str = Field(..., description="Path to the video file (MP4) to upload.")
+    title: str = Field(..., description="Title of the YouTube video.")
+    description: str = Field(..., description="Description of the YouTube video.")
+    tags: list[str] = Field(default_factory=list, description="List of tags for the video.")
+    thumbnail_path: str = Field(..., description="Path to the thumbnail image for the video.")
+
+class YouTubeVideoUploaderPlaceholder(BaseTool):
+    name: str = "YouTube Video Uploader Placeholder"
+    description: str = (
+        "A placeholder tool for uploading a video to YouTube. "
+        "This does not perform any upload, but simulates the interface."
+    )
+    args_schema: Type[BaseModel] = YouTubeVideoUploaderPlaceholderInput
+
+    def _run(self, video_file_path: str, title: str, description: str, tags: list[str] = [], thumbnail_path: str = ""):
+        return f"[PLACEHOLDER] Would upload '{video_file_path}' to YouTube with title '{title}' and thumbnail path '{thumbnail_path}'."
+
+

@@ -9,7 +9,7 @@ from youtube.tools import HeyGenVideoGeneratorTool, PDFParserTool, YouTubeUpload
 
 
 @CrewBase
-class Youtube():
+class Youtube:
     """Youtube crew for B2B sales content creation"""
 
     agents: List[BaseAgent]
@@ -18,9 +18,9 @@ class Youtube():
     @agent
     def content_curator(self) -> Agent:
         return Agent(
-            config=self.agents_config['content_curator'],
+            config=self.agents_config["content_curator"],
             verbose=True,
-            tools=[PDFParserTool(), FileWriterTool()]
+            tools=[PDFParserTool(), FileWriterTool()],
         )
 
     # @agent
@@ -34,29 +34,25 @@ class Youtube():
     @agent
     def video_producer(self) -> Agent:
         return Agent(
-            config=self.agents_config['video_producer'],
+            config=self.agents_config["video_producer"],
             verbose=True,
-            tools=[HeyGenVideoGeneratorTool(), YouTubeUploaderTool()]
+            tools=[HeyGenVideoGeneratorTool(), YouTubeUploaderTool()],
         )
 
     @task
     def content_sourcing_task(self) -> Task:
         return Task(
-            config=self.tasks_config['content_sourcing_task'],
-            expected_output='Path to text of book'
+            config=self.tasks_config["content_sourcing_task"],
+            expected_output="Path to text of book",
         )
 
     @task
     def video_production_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['video_production_task']
-        )
+        return Task(config=self.tasks_config["video_production_task"])
 
-    # @task
-    # def video_upload_task(self) -> Task:
-    #     return Task(
-    #         config=self.tasks_config['video_upload_task']
-    #     )
+    @task
+    def video_upload_task(self) -> Task:
+        return Task(config=self.tasks_config["video_upload_task"])
 
     @crew
     def crew(self) -> Crew:
@@ -65,5 +61,5 @@ class Youtube():
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=True
+            verbose=True,
         )
