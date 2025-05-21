@@ -1,0 +1,22 @@
+content_sourcing_task:
+  description: >
+    Identify and select a high-quality B2B sales book or text for podcast generation. Ensure the content is relevant, up-to-date, and available in a digital format (PDF or plain text).
+
+    use {pdf_url} to get the content of the book
+  expected_output: >
+    Path to locally downloaded text of pdf file
+  agent: content_curator
+
+audio_generation_task:
+  description: >
+    Convert the selected B2B sales text into an engaging audio summary or podcast using AI tools. Ensure the audio is clear, professional, and covers the main points of the source material.
+  expected_output: >
+    An audio file (or a placeholder path) and a transcript of the generated audio.
+  agent: audio_generator
+
+video_production_task:
+  description: >
+    Create a video podcast using two avatars and integrate the source text into the video. Use HeyGen or a similar tool to produce a professional, synchronized video podcast.
+  expected_output: >
+    A video file (or a placeholder path) and a description of the video podcast.
+  agent: video_producer
