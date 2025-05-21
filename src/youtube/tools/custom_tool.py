@@ -50,13 +50,18 @@ class PDFParserTool(BaseTool):
             if not pdf_filename.lower().endswith('.pdf'):
                 pdf_filename += '.pdf'
             txt_filename = pdf_filename[:-4] + '.txt'
-            text_file_path = os.path.join(data_dir, txt_filename)
+            
+            # Save PDF file to data directory
+            pdf_file_path = os.path.join(data_dir, pdf_filename)
+            with open(pdf_file_path, 'wb') as pdf_file:
+                pdf_file.write(response.content)
             
             # Save extracted text to the new file
+            text_file_path = os.path.join(data_dir, txt_filename)
             with open(text_file_path, 'w', encoding='utf-8') as text_file:
                 text_file.write(text_content)
             
-            # Clean up PDF file
+            # Clean up temporary PDF file
             os.remove(temp_file_path)
             
             return text_file_path
@@ -67,128 +72,286 @@ class PDFParserTool(BaseTool):
             return f"Error parsing PDF: {str(e)}"
 
 
-class AudioGeneratorToolInput(BaseModel):
-    """Input schema for AudioGeneratorTool."""
-    text_file_path: str = Field(description="Path to the text file to convert to audio")
-    voice_id: str = Field(default="en-US-Neural2-F", description="Voice ID for the audio generation")
+# class AudioGeneratorToolInput(BaseModel):
+#     """Input schema for AudioGeneratorTool."""
+#     text_file_path: str = Field(description="Path to the text file to convert to audio")
+#     voice_id: str = Field(default="en-US-Neural2-F", description="Voice ID for the audio generation")
 
 
-class AudioGeneratorTool(BaseTool):
-    name: str = "Audio Generator Tool"
-    description: str = (
-        "A tool that converts text content into audio using text-to-speech services. "
-        "Takes a text file path and returns the path to the generated audio file."
-    )
-    args_schema: Type[BaseModel] = AudioGeneratorToolInput
+# class AudioGeneratorTool(BaseTool):
+#     name: str = "Audio Generator Tool"
+#     description: str = (
+#         "A tool that converts text content into audio using text-to-speech services. "
+#         "Takes a text file path and returns the path to the generated audio file."
+#     )
+#     args_schema: Type[BaseModel] = AudioGeneratorToolInput
 
-    def _run(self, text_file_path: str, voice_id: str = "en-US-Neural2-F") -> str:
-        try:
-            # Read text content from file
-            with open(text_file_path, 'r', encoding='utf-8') as file:
-                text_content = file.read()
+#     def _run(self, text_file_path: str, voice_id: str = "en-US-Neural2-F") -> str:
+#         try:
+#             # Read text content from file
+#             with open(text_file_path, 'r', encoding='utf-8') as file:
+#                 text_content = file.read()
 
-            # Initialize text-to-speech client
-            client = texttospeech.TextToSpeechClient()
+#             # Initialize text-to-speech client
+#             client = texttospeech.TextToSpeechClient()
 
-            # Set up the voice request
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="en-US",
-                name=voice_id
-            )
+#             # Set up the voice request
+#             voice = texttospeech.VoiceSelectionParams(
+#                 language_code="en-US",
+#                 name=voice_id
+#             )
 
-            # Set up the audio configuration
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3
-            )
+#             # Set up the audio configuration
+#             audio_config = texttospeech.AudioConfig(
+#                 audio_encoding=texttospeech.AudioEncoding.MP3
+#             )
 
-            # Generate the audio content
-            synthesis_input = texttospeech.SynthesisInput(text=text_content)
-            response = client.synthesize_speech(
-                input=synthesis_input, voice=voice, audio_config=audio_config
-            )
+#             # Generate the audio content
+#             synthesis_input = texttospeech.SynthesisInput(text=text_content)
+#             response = client.synthesize_speech(
+#                 input=synthesis_input, voice=voice, audio_config=audio_config
+#             )
 
-            # Ensure data directory exists
-            data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
-            os.makedirs(data_dir, exist_ok=True)
+#             # Ensure data directory exists
+#             data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
+#             os.makedirs(data_dir, exist_ok=True)
 
-            # Generate output filename
-            base_name = os.path.basename(text_file_path)
-            audio_filename = f"{os.path.splitext(base_name)[0]}.mp3"
-            audio_file_path = os.path.join(data_dir, audio_filename)
+#             # Generate output filename
+#             base_name = os.path.basename(text_file_path)
+#             audio_filename = f"{os.path.splitext(base_name)[0]}.mp3"
+#             audio_file_path = os.path.join(data_dir, audio_filename)
 
-            # Save the audio content to file
-            with open(audio_file_path, "wb") as out:
-                out.write(response.audio_content)
+#             # Save the audio content to file
+#             with open(audio_file_path, "wb") as out:
+#                 out.write(response.audio_content)
 
-            return audio_file_path
+#             return audio_file_path
 
-        except Exception as e:
-            return f"Error generating audio: {str(e)}"
+#         except Exception as e:
+#             return f"Error generating audio: {str(e)}"
 
 
 class HeyGenPodcastGeneratorToolInput(BaseModel):
     """Input schema for HeyGenPodcastGeneratorTool."""
-    input_text: str = Field(..., description="Text to be spoken in the video.")
+    pdf_file_path: str = Field(..., description="Path to the PDF file to generate a podcast from.")
 
 
 class HeyGenPodcastGeneratorTool(BaseTool):
     name: str = "HeyGen Podcast Generator Tool"
     description: str = (
-        "A tool that generates a podcast video using the HeyGen API. "
-        "Takes only input_text; all other settings are loaded from a JSON config file."
+        "A tool that generates a podcast video using the HeyGen API v1/podcast/submit. "
+        "Takes a PDF URL and other settings as input. Headers and cookies are loaded from config/heygen_settings.json or environment."
     )
     args_schema: Type[BaseModel] = HeyGenPodcastGeneratorToolInput
 
-    def _run(self, input_text: str) -> str:
+    def _run(self, pdf_file_path: str) -> str:
         try:
-            # Try to load settings from config/heygen_settings.json or heygen_settings.json at project root
-            config_paths = [
-                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config', 'heygen_settings.json'),
-                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'heygen_settings.json')
-            ]
-            settings = None
-            for path in config_paths:
-                if os.path.exists(path):
-                    with open(path, 'r', encoding='utf-8') as f:
-                        settings = json.load(f)
-                    break
-            if not settings:
-                return "HeyGen settings JSON file not found."
-            required_keys = ["avatar_id", "avatar_style", "voice_id", "background_color", "width", "height", "api_key"]
-            for key in required_keys:
-                if key not in settings:
-                    return f"Missing '{key}' in HeyGen settings JSON file."
-            url = "https://api.heygen.com/v2/video/generate"
-            headers = {
-                "X-Api-Key": settings["api_key"],
-                "Content-Type": "application/json"
+            import requests
+
+            settings = {
+                "avatar_id": "Daisy-inskirt-20220818",
+                "avatar_style": "normal", 
+                "voice_id": "2d5b0e6cf36f460aa7fc47e3eee4ba54",
+                "background_color": "#008000",
+                "width": 1280,
+                "height": 720
             }
-            payload = {
-                "video_inputs": [
-                    {
-                        "character": {
-                            "type": "avatar",
-                            "avatar_id": settings["avatar_id"],
-                            "avatar_style": settings["avatar_style"]
-                        },
-                        "voice": {
-                            "type": "text",
-                            "input_text": input_text,
-                            "voice_id": settings["voice_id"]
-                        },
-                        "background": {
-                            "type": "color",
-                            "value": settings["background_color"]
-                        }
-                    }
-                ],
-                "dimension": {
-                    "width": settings["width"],
-                    "height": settings["height"]
+
+            # Required fields for the API
+            required_keys = ['key']
+            for k in required_keys:
+                if k not in settings:
+                    return f"Missing '{k}' in HeyGen settings JSON file."
+
+            # Upload the PDF file first
+            with open(pdf_file_path, "rb") as f:
+                upload_url = "https://upload.heygen.com/v1/asset"
+                upload_headers = {
+                    "Content-Type": "application/pdf",
+                    "x-api-key": settings['key']
                 }
+                upload_response = requests.post(upload_url, data=f, headers=upload_headers)
+                upload_response.raise_for_status()
+                asset_data = upload_response.json()
+
+            # Now create the podcast with the uploaded asset
+            headers = {
+                'accept': 'application/json',
+                'content-type': 'application/json',
+                'x-api-key': settings['key']
             }
+
+            payload = {
+                "source_type": "pdf",
+                "asset_id": asset_data.get('asset_id'),
+                "key": settings['key'],
+                "length": settings.get('length', 60),
+                "orientation": settings.get('orientation', 'landscape'),
+                "enable_caption": settings.get('enable_caption', True),
+                "language": settings.get('language', 'en'),
+                "pose_id_1": settings.get('pose_id_1'),
+                "pose_id_2": settings.get('pose_id_2')
+            }
+
+            url = "https://api2.heygen.com/v1/podcast/submit"
             response = requests.post(url, headers=headers, json=payload)
             response.raise_for_status()
             return response.text
         except Exception as e:
             return f"Error generating HeyGen podcast video: {str(e)}"
+
+
+class YouTubeUploaderToolInput(BaseModel):
+    """Input schema for YouTubeUploaderTool."""
+    video_file_path: str = Field(..., description="Path to the video file (MP4) to upload.")
+    title: str = Field(..., description="Title of the YouTube video.")
+    description: str = Field(..., description="Description of the YouTube video.")
+    tags: list[str] = Field(default_factory=list, description="List of tags for the video.")
+
+
+class YouTubeUploaderTool(BaseTool):
+    name: str = "YouTube Uploader Tool"
+    description: str = (
+        "A tool that uploads a video to YouTube using the YouTube Data API v3. "
+        "Requires OAuth2 credentials in config/youtube_settings.json."
+    )
+    args_schema: Type[BaseModel] = YouTubeUploaderToolInput
+
+    def _run(self, video_file_path: str, title: str, description: str, tags: list[str] = []):
+        try:
+            import json
+            from googleapiclient.discovery import build
+            from googleapiclient.http import MediaFileUpload
+            from google.oauth2.credentials import Credentials
+            import os
+
+            # Load credentials from config/youtube_settings.json
+            config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config', 'youtube_settings.json')
+            if not os.path.exists(config_path):
+                return "YouTube settings JSON file not found at config/youtube_settings.json."
+            with open(config_path, 'r', encoding='utf-8') as f:
+                creds_data = json.load(f)
+            creds = Credentials.from_authorized_user_info(creds_data)
+
+            youtube = build('youtube', 'v3', credentials=creds)
+
+            body = {
+                'snippet': {
+                    'title': title,
+                    'description': description,
+                    'tags': tags,
+                },
+                'status': {
+                    'privacyStatus': 'private',
+                }
+            }
+
+            media = MediaFileUpload(video_file_path, mimetype='video/mp4', resumable=True)
+            request = youtube.videos().insert(
+                part=','.join(body.keys()),
+                body=body,
+                media_body=media
+            )
+            response = request.execute()
+            return f"Video uploaded successfully. Video ID: {response.get('id')}"
+        except Exception as e:
+            return f"Error uploading video: {str(e)}"
+
+
+class HeyGenVideoGeneratorToolInput(BaseModel):
+    """Input schema for HeyGenVideoGeneratorTool."""
+    file_path: str = Field(..., description="Path to text file to be spoken in the video.")
+
+
+
+class HeyGenVideoGeneratorTool(BaseTool):
+    name: str = "HeyGen Video Generator Tool"
+    description: str = (
+        "A tool that generates a video using the HeyGen API v2/video/generate. "
+        "Takes a text and other settings as input. Headers and cookies are loaded from config/heygen_settings.json or environment."
+    )
+    args_schema: Type[BaseModel] = HeyGenVideoGeneratorToolInput
+
+    def _run(self, file_path: str) -> str:
+        try:
+            import requests
+            import os
+            import time
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+            # HACK for now do to not print everything
+            text = text[:100]
+
+            # Generate video
+            url = "https://api.heygen.com/v2/video/generate"
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "x-api-key": os.getenv("HEYGEN_API_KEY"),
+            }
+            
+            video_inputs = [
+                {
+                    "character": {
+                        "type": "avatar",
+                        "avatar_id": "Daisy-inskirt-20220818",
+                        "scale": 1,
+                        "avatar_style": "normal",
+                        "offset": {"x": 0, "y": 0},
+                        "talking_style": "stable",
+                        "expression": "default"
+                    },
+                    "voice": {
+                        "type": "text",
+                        "voice_id": "2d5b0e6cf36f460aa7fc47e3eee4ba54",
+                        "input_text": text,
+                        "speed": 1.0,
+                        "pitch": 1.0,
+                        "emotion": "Friendly",
+                        "locale": "en-US"
+                    },
+                    "background": {
+                        "type": "color",
+                        "value": "#008000"
+                    }
+                }
+            ]
+            
+            payload = {
+                "caption": True,
+                "dimension": {
+                    "width": 1280,
+                    "height": 720
+                },
+                "video_inputs": video_inputs
+            }
+            
+            response = requests.post(url, json=payload, headers=headers)
+            video_id = response.json()['data']['video_id']
+            
+            # Check status
+            status_url = "https://api.heygen.com/v1/video_status.get"
+            status_headers = {
+                "accept": "application/json",
+                "x-api-key": os.getenv("HEYGEN_API_KEY")
+            }
+            params = {"video_id": video_id}
+            
+            while True:
+                response = requests.get(status_url, headers=status_headers, params=params)
+                status_data = response.json()
+                status = status_data.get('data', {}).get('status')
+
+                if status == 'completed':
+                    video_url = status_data.get('data', {}).get('video_url')
+                    thumbnail_url = status_data.get('data', {}).get('thumbnail_url')
+                    return f"Video generation completed! Video URL: {video_url}, Thumbnail URL: {thumbnail_url}"
+                elif status == 'failed':
+                    return f"Video generation failed: {status_data}"
+                    
+                time.sleep(10)  # Wait 10 seconds before checking again
+
+        except Exception as e:
+            return f"Error generating video: {str(e)}"
